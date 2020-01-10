@@ -146,7 +146,7 @@ function segment_pattern(x,
   ## (smooth x if chosen so via function arguments)
   IF x_similarity_mat_moving_average_W IS NOT NULL:
     DEFINE W_vl =  scalar round(x_similarity_mat_moving_average_W * x_fs)
-    DEFINE x_similarity_mat = vector running_mean(x, W_vl)
+    DEFINE x_similarity_mat = vector defined as running_mean(x, W_vl)
   ELSE:
     DEFINE x_similarity_mat = vector x
   END
@@ -196,9 +196,9 @@ function segment_pattern(x,
                                          finetune_area_wing_vl)
       REDEFINE x_already_fitted = vector defined as update_x_already_fitted(x_already_fitted, tau_tmp, s_tmp)
     END
-    REDEFINE similarity_mat = matrix update_similarity_mat(similarity_mat, tau_tmp, s_tmp, template_rescaled_vl_vec)
-    DEFINE out_tmp = vector 3-element vector of values [tau_tmp, s_tmp, similarity_mat_maxval_tmp]
-    REDEFINE out_mat = update out_mat matrix by appending out_tmp vector to it
+    REDEFINE similarity_mat = matrix defined as update_similarity_mat(similarity_mat, tau_tmp, s_tmp, template_rescaled_vl_vec)
+    DEFINE out_tmp =  3-element vector of values [tau_tmp, s_tmp, similarity_mat_maxval_tmp]
+    REDEFINE out_mat = update matrix out_mat  by appending out_tmp vector to it
   END
   
   REDEFINE out_mat = sort rows of matrix out_mat ascending by values in 1st column 
@@ -227,7 +227,7 @@ function segment_pattern(x,
 function rescale_template(template_vector, vector_length){
 
   DEFINE out = vector being a result of linear interpolation applied to increase/decrease number of points in template_vector to vector_length number of points 
-  REDEFINE out = result of standardizing vector_out vector so it has mean 0 and variance 1
+  REDEFINE out = vector obtained via standardizing vector out so it has mean 0 and variance 1
   RETURN out
 }
 ```
@@ -411,7 +411,7 @@ function update_similarity_mat(similarity_mat,
     DEFINE null_repl_cols_max = tau_tmp + s_i - 2
     REDEFINE null_repl_cols_min = min(max(1, null_repl_cols_min), x_vl)
     REDEFINE null_repl_cols_max = min(max(1, null_repl_cols_max), x_vl)
-    DEFINE null_repl_cols = SEQUENCE FROM null_repl_cols_min TO null_repl_cols_max BY 1
+    DEFINE null_repl_cols = vector defined as SEQUENCE FROM null_repl_cols_min TO null_repl_cols_max BY 1
     REDEFINE similarity_mat = update similarity_mat so as elements at [i, null_repl_cols] are replaced with NULL
   END
   RETURN similarity_mat
