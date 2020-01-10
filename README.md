@@ -170,7 +170,7 @@ function segment_pattern(x,
   IF do_finetune:
     IF x_finetune_moving_average_W IS NOT NULL:
       DEFINE W_vl = scalar round(x_finetune_moving_average_W * x_fs)
-      DEFINE x_finetune = vector running_mean(x, W_vl)
+      DEFINE x_finetune = vector defined as running_mean(x, W_vl)
     ELSE:
       DEFINE x_finetune = x
     END
@@ -188,13 +188,13 @@ function segment_pattern(x,
       BREAK LOOP
     END
     DEFINE tau_tmp, s_tmp = scalar row index, scalar column index of current maximum value of similarity_mat matrix
-    DEFINE similarity_mat_maxval_tmp = scalar current maximum value of similarity_mat matrix
+    DEFINE similarity_mat_maxval_tmp = current maximum value of similarity_mat matrix
     IF do_finetune: 
       REDEFINE tau_tmp, s_tmp = scalar, scalar of finetune(tau_tmp, s_tmp, 
                                          x_finetune, x_already_fitted,
                                          pattern_vl_min, pattern_vl_max,
                                          finetune_area_wing_vl)
-      REDEFINE x_already_fitted = vector update_x_already_fitted(x_already_fitted, tau_tmp, s_tmp)
+      REDEFINE x_already_fitted = vector defined as update_x_already_fitted(x_already_fitted, tau_tmp, s_tmp)
     END
     REDEFINE similarity_mat = matrix update_similarity_mat(similarity_mat, tau_tmp, s_tmp, template_rescaled_vl_vec)
     DEFINE out_tmp = vector 3-element vector of values [tau_tmp, s_tmp, similarity_mat_maxval_tmp]
