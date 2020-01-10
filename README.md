@@ -135,8 +135,8 @@ function segment_pattern(x,
     DEFINE vl_i = i-th element of vector template_rescaled_vl_vec
     DEFINE templates_rescaled_i = empty matrix of [k x vl_i] dimension
     FOR j IN SEQUENCE FROM 1 TO k BY 1: 
-      DEFINE template_j = j-th element of list templates_list
-      DEFINE template_rescaled_ij = vector rescale_template(template_j, vl_i)
+      DEFINE template_j =  vector defined as j-th element of list templates_list
+      DEFINE template_rescaled_ij = vector defined as rescale_template(template_j, vl_i)
       DEFINE j-th row of matrix templates_rescaled_i = vector template_rescaled_ij
     END 
     DEFINE i-th element of templates_rescaled_list = matrix templates_rescaled_i 
@@ -155,11 +155,11 @@ function segment_pattern(x,
   ## subsequent windows  of x
   DEFINE similarity_mat = empty matrix of [m x n] dimension
   FOR i IN SEQUENCE FROM 1 TO m BY 1:
-    DEFINE templates_rescaled_i = i-th element of list templates_rescaled_list
+    DEFINE templates_rescaled_i = vector defined as i-th element of list templates_rescaled_list
     DEFINE similarity_mat_i = empty matrix of [k x n] dimension
     FOR j IN SEQUENCE FROM 1 TO k BY 1: 
       DEFINE template_rescaled_ij = j-th row of matrix templates_rescaled_i
-      DEFINE similarity_vec_ij = vector running_similarity(x_similarity_mat, template_rescaled_ij, similarity_measure)
+      DEFINE similarity_vec_ij = vector defined as running_similarity(x_similarity_mat, template_rescaled_ij, similarity_measure)
       DEFINE j-th row of similarity_mat_i = vector similarity_vec_ij 
     END
     DEFINE i-th row of similarity_mat = vector being column-wise maximum of matrix similarity_mat_i  
