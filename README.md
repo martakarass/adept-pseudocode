@@ -1,20 +1,12 @@
----
-title: "ADEPT pattern segmentation algorithm - pseudocode"
-author: "Marta Karas" 
-date: 2020-01-08
-output:
-  html_document:
-    toc: true
-    toc_depth: 5
----
+
 
 ## Pseudocode intro notes
 
 ##### Paper reference
 
-Karas, M., Straczkiewicz, M., Fadel, W., Harezlak, J., Crainiceanu, C.M., Urbanek, J.K. Adaptive empirical pattern transformation (ADEPT) with application to walking stride segmentation. Biostatistics, 2019. [(Article link)](https://academic.oup.com/biostatistics/advance-article/doi/10.1093/biostatistics/kxz033/5572661?guestAccessKey=f3abdf65-a94d-4509-b7e9-cca2ff384528)
+- Karas, M., Straczkiewicz, M., Fadel, W., Harezlak, J., Crainiceanu, C.M., Urbanek, J.K. Adaptive empirical pattern transformation (ADEPT) with application to walking stride segmentation. Biostatistics, 2019. [(Article link)](https://academic.oup.com/biostatistics/advance-article/doi/10.1093/biostatistics/kxz033/5572661?guestAccessKey=f3abdf65-a94d-4509-b7e9-cca2ff384528)
 
-##### Some naming conventions 
+##### Naming conventions used
 
 - Objects are indexed starting from 1 (not: 0). 
 
@@ -52,6 +44,8 @@ Karas, M., Straczkiewicz, M., Fadel, W., Harezlak, J., Crainiceanu, C.M., Urbane
 
 - Multiplying scalar and vector. By convention, `2 * [3 4 5]` yields vector `[6 8 10]`.
 
+- `REDEFINE` could be thought of "update object", or "overwrite object with its modified version". 
+
 
 ## Pseudocode 
 
@@ -59,30 +53,30 @@ Karas, M., Straczkiewicz, M., Fadel, W., Harezlak, J., Crainiceanu, C.M., Urbane
 
 #### Arguments
 
-- `x` - A numeric vector. A one-dimensional time-series we want to segment pattern from. In accelerometry application, `x` would often be a vector magnitude computed from a three-dimensional time-series of acceleration measurements (for details how to compute vector magnitude, see [source](https://martakarass.github.io/resources/specialtopics_materials/intro/#spherical-coordinate-system-radius-vector-magnitude)). 
+- `x` - A numeric vector. A one-dimensional time-series we want to segment pattern from. In the application of walking stride segmentation, `x` would often be a vector magnitude computed from a three-dimensional time-series of raw acceleration measurements (for details how to compute vector magnitude, see [source](https://martakarass.github.io/resources/specialtopics_materials/intro/#spherical-coordinate-system-radius-vector-magnitude)). 
 
 - `x_fs` - A numeric scalar. Frequency at which a time-series `x` is collected, expressed in a number of observations per second.
 
 - `templates_list` - A list of numeric vectors. Each vector represents a distinct pattern template used in segmentation. Such templates may be sourced from publicly available ones (see R data package `adeptdata` [documentation](https://cran.r-project.org/web/packages/adeptdata/adeptdata.pdf), page 4) or manually derived from some small part of data collected from individuals from population of interest. 
 
-- `pattern_duration_vec` - A numeric vector. A grid of potential pattern durations used in segmentation. Expressed in seconds. Example: for healthy individual with assumed stride duration range between 0.7s and 1.8s could be `[0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8]`.
+- `pattern_duration_vec` - A numeric vector. A grid of potential pattern durations used in segmentation. Expressed in seconds. Example: for healthy individual with assumed stride duration range between 0.7s and 1.8s, this argument could be a vector `[0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8]`.
 
 - `similarity_measure` - A character scalar. Statistic used to compute similarity between a time-series `x` and pattern templates. Considered values: `"cov"` - covariance, `"cor"` - correlation. Default is `"cov"`.
 
-- `x_similarity_mat_moving_average_W` - A numeric scalar. A length of a moving window used in moving average smoothing of a time-series `x` for similarity matrix computation. Expressed in seconds. Default is `NULL` (no smoothing is applied).
+- `x_similarity_mat_moving_average_W` - A numeric scalar. A length of a moving window used in moving average smoothing of a time-series `x` for similarity matrix computation. Expressed in seconds. Default is NULL (no smoothing is applied).
 
-- `do_finetune` - A logical scalar. Whether to apply fine-tuning procedure in segmentation. The fine-tune procedure tunes preliminarily identified beginning and end of a pattern in data so as they correspond to local maxima of time-series `x` (or smoothed version of `x`) found within neighbourhoods of preliminary locations. Defaults to FALSE (no fine-tuning procedure employed). 
+- `do_finetune` - A logical scalar. Whether to apply fine-tuning procedure in segmentation. The fine-tuning procedure tunes preliminarily identified beginning and end of a pattern in data so as they correspond to local maxima of `x` (or of smoothed version of `x`, see `x_finetune_moving_average_W` arg) found within neighbourhoods of preliminary locations. Defaults to FALSE (no fine-tuning procedure employed). In the application of walking stride segmentation, we would often want to keep it TRUE as we want to learn precise location of a pattern occurrence in data.
 
 - `x_finetune_moving_average_W` - A numeric scalar. A length of a moving window used in moving average smoothing of a time-series `x` in fine-tuning procedure. Expressed in seconds. Default is NULL (no smoothing applied). If `do_finetune` is set to FALSE, this parameter has no action. 
 
-- `finetune_area_wing_W` - A numeric scalar. A length of wing of the area centered at preliminarily identified beginning and end of a pattern within which we search for local maxima of `x` (or smoothed version of `x`) in fine-tuning procedure. For example, if this parameter is set to `0.2` (and `do_finetune` is set to TRUE), he algorithm will search for local maxima of `x` time-series is area which corresponds to from 0.2 seconds before to 0.2 seconds after the preliminarily identified beginning/end of a pattern. Default is `NULL`. If `do_finetune` is set to FALSE, this parameter has no action. Must be such `finetune_area_wing_W` is less than half od the smallest value in `pattern_duration_vec` (after mapping from time [s] to vector length [number of vector indices] that happens in algorithm). 
+- `finetune_area_wing_W` - A numeric scalar. A length of wing of the area centered at preliminarily identified beginning and end of a pattern within which we search for local maxima of `x` (or smoothed version of `x`) in fine-tuning procedure. For example, if this parameter is set to `0.2` and `do_finetune` is set to TRUE, the algorithm will search for local maxima of `x` subset (or of smoothed version of `x` subset, see `x_finetune_moving_average_W` arg) which corresponds to from 0.2 seconds before to 0.2 seconds after the preliminarily identified beginning/end of a pattern, respectively. Default is NULL. If `do_finetune` is set to FALSE, this parameter has no action. Must be such `finetune_area_wing_W` is less than half od the smallest value in `pattern_duration_vec` (after mapping from time [s] to vector length [number of vector indices] that happens in algorithm). 
 
 #### Returns
 
-- `out_mat` matrix with pattern segmentation results. Each row describes one identified pattern occurrence:
-    -  column 1 (`tau_i`) -  index of `x` where pattern starts,
-    -  column 2 (`T_i`) - pattern duration, expressed in `x` vector length,
-    -  column 3 (`sim_i`) - similarity between a pattern and `x` (as determined with `similarity_mat` matrix value in the algorithm, before fine-tune procedure is done, if any). 
+- `out_mat` - matrix with pattern segmentation results. Each row describes one identified pattern occurrence.
+    -  column 1 (`tau_i`) -  numeric (integer) scalar; index of `x` where pattern starts.
+    -  column 2 (`T_i`) - numeric (integer) scalar; pattern duration, expressed in `x` vector length,
+    -  column 3 (`sim_i`) - numeric scalar; similarity between a pattern and `x` (as determined with `similarity_mat` matrix value in the algorithm; does not change after fine-tuning procedure application). 
 
 #### Pseudocode 
 
@@ -99,81 +93,86 @@ function segment_pattern(x,
                          ){
 
   DEFINE n = length of vector x 
-  DEFINE k = number of elements in templates_list
-  DEFINE template_rescaled_vl_vec = x_fs * pattern_duration_vec
-  REDEFINE template_rescaled_vl_vec = rounded, unique, sorted ascending template_rescaled_vl_vec
-  DEFINE m = length of vector template_rescaled_vl_vec
+  DEFINE k = number of elements in list templates_list
+  DEFINE template_rescaled_vl_vec =  scalar x_fs * vector pattern_duration_vec
+  REDEFINE template_rescaled_vl_vec = sorted ascending, unique, rounded to nearest integer values of vector template_rescaled_vl_vec 
+  DEFINE m = length of vector template_rescaled_vl_vec 
   
+  ## Define list of matrices with rescaled pattern templates
   DEFINE templates_rescaled_list = empty list of size m
   FOR i IN SEQUENCE FROM 1 TO m BY 1:
-    DEFINE vl_i = i-th element of template_rescaled_vl_vec
+    DEFINE vl_i = i-th element of vector template_rescaled_vl_vec
     DEFINE templates_rescaled_i = empty matrix of [k x vl_i] dimension
     FOR j IN SEQUENCE FROM 1 TO k BY 1: 
-      DEFINE template_j = j-th element of templates_list
-      DEFINE template_rescaled_ij = rescale_template(template_j, vl_i)
-      DEFINE j-th row of templates_rescaled_i = template_rescaled_ij
+      DEFINE template_j = j-th element of list templates_list
+      DEFINE template_rescaled_ij = vector rescale_template(template_j, vl_i)
+      DEFINE j-th row of matrix templates_rescaled_i = vector template_rescaled_ij
     END 
-    DEFINE i-th element of templates_rescaled_list = templates_rescaled_i
+    DEFINE i-th element of templates_rescaled_list = matrix templates_rescaled_i 
   END 
   
+  ## Define x for the purpose of similarity matrix computation  
+  ## (smooth x if chosen so via function arguments)
   IF x_similarity_mat_moving_average_W IS NOT NULL:
-    DEFINE W_vl =  round(x_similarity_mat_moving_average_W * x_fs)
-    DEFINE x_similarity_mat = running_mean(x, W_vl)
+    DEFINE W_vl =  scalar round(x_similarity_mat_moving_average_W * x_fs)
+    DEFINE x_similarity_mat = vector running_mean(x, W_vl)
   ELSE:
-    DEFINE x_similarity_mat = x
+    DEFINE x_similarity_mat = vector x
   END
   
+  ## Compute similarity matrix between rescaled pattern templates and 
+  ## subsequent windows  of x
   DEFINE similarity_mat = empty matrix of [m x n] dimension
   FOR i IN SEQUENCE FROM 1 TO m BY 1:
-    DEFINE templates_rescaled_i = i-th element of templates_rescaled_list
+    DEFINE templates_rescaled_i = i-th element of list templates_rescaled_list
     DEFINE similarity_mat_i = empty matrix of [k x n] dimension
     FOR j IN SEQUENCE FROM 1 TO k BY 1: 
       DEFINE template_rescaled_ij = j-th row of matrix templates_rescaled_i
-      DEFINE similarity_vec_ij = running_similarity(x_similarity_mat, template_rescaled_ij, similarity_measure)
-      DEFINE j-th row of similarity_mat_i = similarity_vec_ij 
+      DEFINE similarity_vec_ij = vector running_similarity(x_similarity_mat, template_rescaled_ij, similarity_measure)
+      DEFINE j-th row of similarity_mat_i = vector similarity_vec_ij 
     END
-    DEFINE i-th row of similarity_mat = column-wise maximum of similarity_mat_i matrix 
+    DEFINE i-th row of similarity_mat = vector being column-wise maximum of matrix similarity_mat_i  
   END
-  DELETE x_similarity_mat 
   
+  ## Define fine-tuning procedure objects if fine-tuning procedure was chosen
+  ## via function arguments
   IF do_finetune:
     IF x_finetune_moving_average_W IS NOT NULL:
-      DEFINE W_vl = round(x_finetune_moving_average_W * x_fs)
-      DEFINE x_finetune = running_mean(x, W_vl)
+      DEFINE W_vl = scalar round(x_finetune_moving_average_W * x_fs)
+      DEFINE x_finetune = vector running_mean(x, W_vl)
     ELSE:
       DEFINE x_finetune = x
     END
     DEFINE x_already_fitted = vector of length n of all values set to FALSE
-    DEFINE pattern_vl_min = min(template_rescaled_vl_vec) 
-    DEFINE pattern_vl_max = max(template_rescaled_vl_vec)
-    DEFINE finetune_area_wing_vl = round(finetune_area_wing_W * x_fs)
-    ASSERT finetune_area_wing_vl < round(0.5 * min(template_rescaled_vl_vec))
-  ELSE:
-    DEFINE x_finetune = x
+    DEFINE pattern_vl_min = scalar min(template_rescaled_vl_vec) 
+    DEFINE pattern_vl_max = scalar max(template_rescaled_vl_vec)
+    DEFINE finetune_area_wing_vl = scalar round(finetune_area_wing_W * x_fs)
+    ASSERT finetune_area_wing_vl < scalar round(0.5 * min(template_rescaled_vl_vec))
   END
   
+  ## Perform iterative procedure to identify occurrences of pattern in the data x
   DEFINE out_mat = empty matrix of [0 x 3] dimension
   WHILE TRUE: 
     IF all elements in similarity_mat are NULL: 
       BREAK LOOP
     END
-    DEFINE tau_tmp, s_tmp = row index, column index of current maximum value of similarity_mat matrix
-    DEFINE similarity_mat_maxval_tmp = current maximum value of similarity_mat matrix
+    DEFINE tau_tmp, s_tmp = scalar row index, scalar column index of current maximum value of similarity_mat matrix
+    DEFINE similarity_mat_maxval_tmp = scalar current maximum value of similarity_mat matrix
     IF do_finetune: 
-      REDEFINE tau_tmp, s_tmp = finetune(tau_tmp, s_tmp, 
+      REDEFINE tau_tmp, s_tmp = scalar, scalar of finetune(tau_tmp, s_tmp, 
                                          x_finetune, x_already_fitted,
                                          pattern_vl_min, pattern_vl_max,
                                          finetune_area_wing_vl)
-      REDEFINE x_already_fitted = update_x_already_fitted(x_already_fitted, tau_tmp, s_tmp)
+      REDEFINE x_already_fitted = vector update_x_already_fitted(x_already_fitted, tau_tmp, s_tmp)
     END
-    REDEFINE similarity_mat = update_similarity_mat(similarity_mat, tau_tmp, s_tmp, template_rescaled_vl_vec)
-    DEFINE out_tmp = 3-element vector of values [tau_tmp, s_tmp, similarity_mat_maxval_tmp]
+    REDEFINE similarity_mat = matrix update_similarity_mat(similarity_mat, tau_tmp, s_tmp, template_rescaled_vl_vec)
+    DEFINE out_tmp = vector 3-element vector of values [tau_tmp, s_tmp, similarity_mat_maxval_tmp]
     REDEFINE out_mat = update out_mat matrix by appending out_tmp vector to it
   END
   
-  REDEFINE out_mat = sort rows out_mat ascending by tau_tmp (by 1st column of a matrix)
+  REDEFINE out_mat = sort rows of matrix out_mat ascending by values in 1st column 
   CONDITIONED ON output object structure can have column names: 
-    REDEFINE out_mat = assign column names to out_mat to be [tau_i, T_i, sim_i] 
+    REDEFINE out_mat = assign column names of matrix out_mat to be ["tau_i", "T_i", "sim_i"] 
   END 
   
   RETURN out_mat
@@ -196,8 +195,8 @@ function segment_pattern(x,
 ```
 function rescale_template(template_vector, vector_length){
 
-  DEFINE out = result of linear interpolation applied to increase/decrease number of points in template_vector to vector_length number of points 
-  REDEFINE out = standardize vector_out vector so it has mean 0 and variance 1
+  DEFINE out = vector being a result of linear interpolation applied to increase/decrease number of points in template_vector to vector_length number of points 
+  REDEFINE out = result of standardizing vector_out vector so it has mean 0 and variance 1
   RETURN out
 }
 ```
@@ -211,7 +210,7 @@ function rescale_template(template_vector, vector_length){
 
 #### Returns
 
-- `out` - A numeric vector. The length of `out` equals the length of `x` vector. `i`-th element of `out` corresponds to a sample mean of subset of `x` at positions `[i,...,i+W-1]`; the tail of the vector where sample mean is no longer defined is filled with `NULL`. Examples: 
+- `out` - A numeric vector. The length of `out` equals the length of `x` vector. `i`-th element of `out` corresponds to a sample mean of subset of `x` at positions `[i,...,i+W-1]`; the tail of the vector where sample mean is no longer defined is filled with NULL. Examples: 
     - `running_mean(x = [1  2  3  4  5  6  7  8  9 10], W_vl = 3)` should evaluate to `[2  3  4  5  6  7  8  9 NULL NULL]`
     - `running_mean(x = [20 19 18 17 16 15 14 13 12 11 10], W_vl = 5)` should evaluate to `[18 17 16 15 14 13 12 NULL NULL NULL NULL]`
 
@@ -237,7 +236,7 @@ function running_mean(x, W_vl){
 
 #### Returns
 
-- `out` - A numeric vector. The length of `out` equals the length of `x` vector. Say `y_vl` is length of vector `y`. Then `i`-th element of `out` corresponds to a sample similarity (`"cov"` - covariance, `"cor"` - correlation) of subset of `x` at positions `[i,...,i+y_vl-1]` and `y`; the tail of the vector where sample mean is no longer defined is filled with `NULL`. Examples: 
+- `out` - A numeric vector. The length of `out` equals the length of `x` vector. Say `y_vl` is length of vector `y`. Then `i`-th element of `out` corresponds to a sample similarity (`"cov"` - covariance, `"cor"` - correlation) of subset of `x` at positions `[i,...,i+y_vl-1]` and `y`; the tail of the vector where sample mean is no longer defined is filled with NULL. Examples: 
     - `running_similarity([1 -1  1  0  1 -1  1  0  1 -1  1  0], [1 -1  1], "cor")` should evaluate to `[1.0000000 -0.8660254  1.0000000 -0.8660254  1.0000000 -0.8660254  1.0000000 -0.8660254  1.0000000 -0.8660254 NULL NULL]`
     - `running_similarity([1 -1  1  0  1 -1  1  0  1 -1  1  0], [1 -1  1], "cov")` should evaluate to `[1.3333333 -1.0000000  0.6666667 -1.0000000  1.3333333 -1.0000000  0.6666667 -1.0000000  1.3333333 -1.0000000 NULL NULL]`
     
@@ -291,15 +290,15 @@ function finetune(tau_tmp,
   ## maximum value around tau1_tmp point
   DEFINE tau1_area_idx_min = max(tau1_tmp - finetune_area_wing_vl, 1)
   DEFINE tau1_area_idx_max = tau1_tmp + finetune_area_wing_vl
-  DEFINE tau1_area_idx = SEQUENCE FROM tau1_area_idx_min TO tau1_area_idx_max BY 1
-  REDEFINE tau1_area_idx = subset of tau1_area_idx for which x_already_fitted[tau1_area_idx] is FALSE
+  DEFINE tau1_area_idx = vector defined as SEQUENCE FROM tau1_area_idx_min TO tau1_area_idx_max BY 1
+  REDEFINE tau1_area_idx = vector defined as subset of tau1_area_idx for which x_already_fitted[tau1_area_idx] is FALSE
 
   ## Define search area indices of x_finetune signal in which we search for 
   ## maximum value around tau2_tmp point
   DEFINE tau2_area_idx_min = tau2_tmp - finetune_area_wing_vl
   DEFINE tau2_area_idx_max = min(tau2_tmp + finetune_area_wing_vl, finetune_area_wing_vl)
-  DEFINE tau2_area_idx = SEQUENCE FROM tau2_area_idx_min TO tau2_area_idx_min BY 1
-  REDEFINE tau2_area_idx = subset of tau2_area_idx for which x_already_fitted[tau2_area_idx] is FALSE
+  DEFINE tau2_area_idx = vector defined as SEQUENCE FROM tau2_area_idx_min TO tau2_area_idx_min BY 1
+  REDEFINE tau2_area_idx = vector defined as subset of tau2_area_idx for which x_already_fitted[tau2_area_idx] is FALSE
 
   ASSERT TRUE max(tau1_area_idx) < tau2_tmp
   ASSERT TRUE min(tau2_area_idx) > tau1_tmp
@@ -313,15 +312,15 @@ function finetune(tau_tmp,
   
   ## Identify a pair of points in the two neighbourhods which corresponds to 
   ## maximum values of of `x_finetune` signal within egligible indices
-  DEFINE x_finetune_at_tau1_area = x_finetune[tau1_area_idx]
-  DEFINE x_finetune_at_tau2_area = x_finetune[tau2_area_idx]
+  DEFINE x_finetune_at_tau1_area = vector defined as x_finetune[tau1_area_idx] (tau1_area_idx-th elements of vector x_finetune)
+  DEFINE x_finetune_at_tau2_area = vector defined as x_finetune[tau2_area_idx] (tau2_area_idx-th elements of vector x_finetune)
   DEFINE x_finetune_at_taus_areas_mat =  matrix of [tau1_area_idx_vl x tau2_area_idx_vl] dimension, where [i,j]-th matrix element (i-th row and j-th column matrix entry) equals x_finetune_at_tau1_area[i]+x_finetune_at_tau2_area[j] (i-th element of vector x_finetune_at_tau1_area plus j-th element of vector x_finetune_at_tau2_area)
   REDEFINE x_finetune_at_taus_areas_mat = matrix of [tau1_area_idx_vl x tau2_area_idx_vl] dimension where [i,j]-th element remains x_finetune_at_taus_areas_mat[i,j] if [i,j]-th element of tau12_mat_isvalid is TRUE, otherwise it is set to NULL
   
   ## Identify "fine-tuned" start and end index point of identified pattern occurence
   DEFINE whichmaxrow, whichmaxcol = row index, column index of maximum value of x_finetune_at_taus_areas_mat matrix
-  DEFINE tau1_tmp = tau1_area_idx[whichmaxrow] (whichmaxrow-th element of vector tau1_area_idx)
-  DEFINE tau2_tmp = tau2_area_idx[whichmaxcol] (whichmaxcol-th element of vector tau2_area_idx)
+  DEFINE tau1_tmp = vector defined as tau1_area_idx[whichmaxrow] (whichmaxrow-th element of vector tau1_area_idx)
+  DEFINE tau2_tmp = vector defined as tau2_area_idx[whichmaxcol] (whichmaxcol-th element of vector tau2_area_idx)
   DEFINE tau_new = tau1_tmp
   DEFINE s_new = tau2_tmp - tau1_tmp + 1
   
@@ -346,7 +345,7 @@ function finetune(tau_tmp,
 ```
 function update_x_already_fitted(x_already_fitted, tau_tmp, s_tmp){
 
-  REDFINE replace_idx = SEQUENCE FROM (tau_tmp + 1) TO (tau_tmp + s_tmp - 2) BY 1
+  REDFINE replace_idx = vector defined as SEQUENCE FROM (tau_tmp + 1) TO (tau_tmp + s_tmp - 2) BY 1
   REDEFINE x_already_fitted = set x_already_fitted[replace_idx] to TRUE
   RETURN x_already_fitted
 }
@@ -382,7 +381,7 @@ function update_similarity_mat(similarity_mat,
     REDEFINE null_repl_cols_min = min(max(1, null_repl_cols_min), x_vl)
     REDEFINE null_repl_cols_max = min(max(1, null_repl_cols_max), x_vl)
     DEFINE null_repl_cols = SEQUENCE FROM null_repl_cols_min TO null_repl_cols_max BY 1
-    REDEFINE similarity_mat = update similarity_mat by replacing elements at [i, null_repl_cols] with NULL
+    REDEFINE similarity_mat = update similarity_mat so as elements at [i, null_repl_cols] are replaced with NULL
   END
   RETURN similarity_mat
 }
